@@ -62,7 +62,7 @@ def generate_response(messages):
             model=selected_model,
             messages=[{"role": "system", "content": system_prompt}] + messages,
             temperature=temperature,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_tokens,
             top_p=top_p,
             frequency_penalty=frequency_penalty,
             presence_penalty=presence_penalty,

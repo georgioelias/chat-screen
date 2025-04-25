@@ -58,8 +58,6 @@ def generate_response(messages):
         response = openai.chat.completions.create(
             model=selected_model,
             messages=[{"role": "system", "content": system_prompt}] + messages,
-            temperature=temperature,
-            max_completion_tokens=3000,
         )
         return response.choices[0].message.content
     except Exception as e:

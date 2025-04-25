@@ -20,6 +20,7 @@ if "messages" not in st.session_state:
 models = [
     "gpt-4o",
     "o4-mini",
+    "gpt-4o-search-preview-2025-03-11",
 ]
 
 # Sidebar for model selection and parameters

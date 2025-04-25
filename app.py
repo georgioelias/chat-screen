@@ -33,10 +33,6 @@ with st.sidebar:
     # Model parameters
     st.subheader("Model Parameters")
     temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1)
-    max_tokens = st.number_input("Max Tokens", min_value=100, max_value=8000, value=1000, step=100)
-    top_p = st.slider("Top P", min_value=0.0, max_value=1.0, value=1.0, step=0.05)
-    frequency_penalty = st.slider("Frequency Penalty", min_value=-2.0, max_value=2.0, value=0.0, step=0.1)
-    presence_penalty = st.slider("Presence Penalty", min_value=-2.0, max_value=2.0, value=0.0, step=0.1)
     
     # System prompt
     st.subheader("System Prompt")
@@ -63,10 +59,7 @@ def generate_response(messages):
             model=selected_model,
             messages=[{"role": "system", "content": system_prompt}] + messages,
             temperature=temperature,
-            max_completion_tokens=max_tokens,
-            top_p=top_p,
-            frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty,
+            max_completion_tokens=3000,
         )
         return response.choices[0].message.content
     except Exception as e:

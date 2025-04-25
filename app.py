@@ -32,7 +32,19 @@ with st.sidebar:
     
     # Model parameters
     st.subheader("Model Parameters")
-    temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1)
+    
+    # Checkbox to enable/disable temperature
+    use_temperature = st.checkbox("Use Temperature", value=True)
+    
+    # Temperature slider (shown regardless of checkbox state)
+    temperature = st.slider(
+        "Temperature", 
+        min_value=0.0, 
+        max_value=2.0, 
+        value=0.7, 
+        step=0.1,
+        disabled=not use_temperature
+    )
     
     # System prompt
     st.subheader("System Prompt")
@@ -55,10 +67,18 @@ for message in st.session_state.messages:
 # Function to generate response
 def generate_response(messages):
     try:
-        response = openai.chat.completions.create(
-            model=selected_model,
-            messages=[{"role": "system", "content": system_prompt}] + messages,
-        )
+        # Base parameters
+        params = {
+            "model": selected_model,
+            "messages": [{"role": "system", "content": system_prompt}] + messages,
+            "max_completion_tokens": 3000,
+        }
+        
+        # Only include temperature if checkbox is checked
+        if use_temperature:
+            params["temperature"] = temperature
+            
+        response = openai.chat.completions.create(**params)
         return response.choices[0].message.content
     except Exception as e:
         return f"Error: {str(e)}"
@@ -83,4 +103,4 @@ if prompt := st.chat_input("What would you like to discuss?"):
 
 # Display API key warning if not set
 if not os.getenv("OPENAI_API_KEY"):
-    st.warning("Please set your OpenAI API key in the .env file to use this application.") 
+    st.warning("Please set your OpenAI API key in the .env file to use this application.")

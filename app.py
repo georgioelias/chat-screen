@@ -33,9 +33,8 @@ openai_models = {
 
 claude_models = {
     "Claude: 3.7 Sonnet": "claude-3-7-sonnet-20250219",  # Latest Claude model as of April 2025
-    "Claude: 3.5 Sonnet": "claude-3-5-sonnet-20240620",
-    "Claude: 3 Opus": "claude-3-opus-20240229",
-    "Claude: 3.5 Haiku": "claude-3-5-haiku-20240307",
+    "Claude: 3.5 Sonnet": "claude-3-5-sonnet-20241022",
+
 }
 
 # Combine models for display but keep provider information

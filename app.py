@@ -33,7 +33,9 @@ openai_models = {
 
 claude_models = {
     "Claude: 3.7 Sonnet": "claude-3-7-sonnet-20250219",  # Latest Claude model as of April 2025
-    "Claude: 3.5 Sonnet": "claude-3-5-sonnet-20241022",
+    "Claude: 3.5 Sonnet": "claude-3-5-sonnet-20240620",
+    "Claude: 3 Opus": "claude-3-opus-20240229",
+    "Claude: 3.5 Haiku": "claude-3-5-haiku-20240307",
 }
 
 # Combine models for display but keep provider information
@@ -113,9 +115,8 @@ def generate_response(messages):
             return response.choices[0].message.content
             
         elif is_claude_model and anthropic_api_key:
-            # Format messages for Claude
-            system_msg = {"role": "system", "content": system_prompt}
-            claude_messages = [system_msg]
+            # Format messages for Claude - system prompt is a separate parameter
+            claude_messages = []
             
             # Add user and assistant messages
             for msg in messages:
@@ -126,6 +127,7 @@ def generate_response(messages):
             params = {
                 "model": selected_model,
                 "messages": claude_messages,
+                "system": system_prompt,  # System prompt as a separate parameter
                 "max_tokens": max_tokens,
             }
             

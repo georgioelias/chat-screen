@@ -1,34 +1,55 @@
 import streamlit as st
 import openai
+import anthropic
 import os
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Set OpenAI API key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# Set OpenAI and Anthropic API keys
+openai_api_key = st.secrets.get("OPENAI_API_KEY")
+anthropic_api_key = st.secrets.get("ANTHROPIC_API_KEY")
+
+# Initialize clients
+if openai_api_key:
+    openai_client = openai.OpenAI(api_key=openai_api_key)
+if anthropic_api_key:
+    anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key)
 
 # App title
-st.title("OpenAI Chat Interface")
+st.title("AI Chat Interface")
 
 # Initialize session state for messages if it doesn't exist
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Models configuration
-models = [
-    "gpt-4o",
-    "o4-mini",
-    "gpt-4o-search-preview-2025-03-11",
-]
+# Model configurations
+openai_models = {
+    "OpenAI: GPT-4o": "gpt-4o",
+    "OpenAI: o4-mini": "o4-mini",
+    "OpenAI: GPT-4o Search": "gpt-4o-search-preview-2025-03-11",
+}
+
+claude_models = {
+    "Claude: 3.7 Sonnet": "claude-3-7-sonnet-20250219",  # Latest Claude model as of April 2025
+    "Claude: 3.5 Sonnet": "claude-3-5-sonnet-20241022",
+}
+
+# Combine models for display but keep provider information
+all_models = {**openai_models, **claude_models}
 
 # Sidebar for model selection and parameters
 with st.sidebar:
     st.header("Configuration")
     
-    # Model selection
-    selected_model = st.selectbox("Select Model", models)
+    # Model selection with provider information
+    selected_model_name = st.selectbox("Select Model", list(all_models.keys()))
+    selected_model = all_models[selected_model_name]
+    
+    # Determine which provider is being used
+    is_openai_model = selected_model_name.startswith("OpenAI:")
+    is_claude_model = selected_model_name.startswith("Claude:")
     
     # Model parameters
     st.subheader("Model Parameters")
@@ -45,6 +66,9 @@ with st.sidebar:
         step=0.1,
         disabled=not use_temperature
     )
+    
+    # Max tokens parameter (works for both providers)
+    max_tokens = st.number_input("Max Tokens", min_value=100, max_value=4096, value=1024, step=100)
     
     # System prompt
     st.subheader("System Prompt")
@@ -67,19 +91,55 @@ for message in st.session_state.messages:
 # Function to generate response
 def generate_response(messages):
     try:
-        # Base parameters
-        params = {
-            "model": selected_model,
-            "messages": [{"role": "system", "content": system_prompt}] + messages,
-            "max_completion_tokens": 3000,
-        }
-        
-        # Only include temperature if checkbox is checked
-        if use_temperature:
-            params["temperature"] = temperature
+        if is_openai_model and openai_api_key:
+            # Format messages for OpenAI
+            openai_messages = [{"role": "system", "content": system_prompt}]
+            for msg in messages:
+                openai_messages.append({"role": msg["role"], "content": msg["content"]})
             
-        response = openai.chat.completions.create(**params)
-        return response.choices[0].message.content
+            # Base parameters for OpenAI
+            params = {
+                "model": selected_model,
+                "messages": openai_messages,
+                "max_tokens": max_tokens,
+            }
+            
+            # Add temperature if enabled
+            if use_temperature:
+                params["temperature"] = temperature
+                
+            # Make OpenAI API call
+            response = openai_client.chat.completions.create(**params)
+            return response.choices[0].message.content
+            
+        elif is_claude_model and anthropic_api_key:
+            # Format messages for Claude
+            system_msg = {"role": "system", "content": system_prompt}
+            claude_messages = [system_msg]
+            
+            # Add user and assistant messages
+            for msg in messages:
+                if msg["role"] in ["user", "assistant"]:
+                    claude_messages.append({"role": msg["role"], "content": msg["content"]})
+            
+            # Base parameters for Claude
+            params = {
+                "model": selected_model,
+                "messages": claude_messages,
+                "max_tokens": max_tokens,
+            }
+            
+            # Add temperature if enabled
+            if use_temperature:
+                params["temperature"] = temperature
+            
+            # Make Claude API call
+            response = anthropic_client.messages.create(**params)
+            return response.content[0].text
+            
+        else:
+            return "Error: API key not found for the selected model provider."
+            
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -94,13 +154,19 @@ if prompt := st.chat_input("What would you like to discuss?"):
     
     # Display assistant response
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = generate_response(st.session_state.messages)
-            st.write(response)
-    
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        if (is_openai_model and not openai_api_key) or (is_claude_model and not anthropic_api_key):
+            st.error(f"API key missing for selected model provider.")
+        else:
+            with st.spinner("Thinking..."):
+                response = generate_response(st.session_state.messages)
+                st.write(response)
+                # Add assistant response to chat history
+                st.session_state.messages.append({"role": "assistant", "content": response})
 
-# Display API key warning if not set
-if not os.getenv("OPENAI_API_KEY"):
-    st.warning("Please set your OpenAI API key in the .env file to use this application.")
+# Display API key warnings if not set
+if not openai_api_key and not anthropic_api_key:
+    st.warning("Please set your OpenAI API key and/or Anthropic API key in the secrets to use this application.")
+elif not openai_api_key:
+    st.info("OpenAI API key not set. Only Claude models will be available.")
+elif not anthropic_api_key:
+    st.info("Anthropic API key not set. Only OpenAI models will be available.")
